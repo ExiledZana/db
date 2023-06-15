@@ -35,27 +35,32 @@ async function generateRandom() {
   const balanceReceiver = await balanceCollection.findOne({ id: receiver });
 
 
-  if (balanceSender === null || balanceReceiver === null) {
+  if (balance[sender] === undefined || balanceReceiver === null) {
     fullBalanceScan(sender);
     fullBalanceScan(receiver);
     createBalanceFile(sender);
     createBalanceFile(receiver);
   }
 
-  if (balanceSender === null){
+  if (balance[sender] === undefined){
     fullBalanceScan(sender);
     createBalanceFile(sender);
   }
 
-  if (balanceReceiver === null) {
+  if (balance[receiver] === undefined) {
     fullBalanceScan(receiver);
     createBalanceFile(receiver);
   }
 
-  parseBalance(sender);
-  parseBalance(receiver);
   transaction(sender, receiver, amount, comission, currentDate, total);
   return [sender, receiver];
+}
+
+async function balanceScan() {
+  const balances = await balanceCollection.find().toArray();
+  balances.forEach((document) => {
+    balance[document.id] = document.balance 
+})
 }
 
 async function createBalanceFile(person){
@@ -68,7 +73,7 @@ async function createBalanceFile(person){
 async function fullBalanceScan(person){
   let currentBalance = 0;
 
-  const documents = await balanceCollection.find({ id: person }).toArray();
+  const documents = await db.collection('leo__transactions').find({ id: person }).toArray();
   documents.forEach((document) => {
     if (document.sender === person) {
       currentBalance -= document.amount;
@@ -94,9 +99,8 @@ async function parseBalance(person) {
 }
 
 async function countFiles() {
- const testDoc = await balanceCollection.find().sort({ id: -1});
+ const testDoc = await db.collection ('leo__transactions').find().sort({ id: -1});
  return testDoc.id;
-
 }
 
 function transaction(sender, receiver, amount, comission, currentDate, total){
@@ -138,6 +142,19 @@ async function saveBalance(){
 
   };
 
+async function saveTrans(){
+  try{
+          
+      const result = await db.collection('leo__transactions').insertMany(queue);
+      console.log(`${result.insertedCount} transactions were added to database`)
+      }
+
+  catch(err){
+    console.error(err)
+  }
+}
+
+
 
 
 async function question (){
@@ -147,31 +164,23 @@ async function question (){
   output: process.stdout
 });
 
-  rl.question('Enter the number of times to generate a transaction: ', (answer) => {
+  rl.question('Enter the number of times to generate a transaction: ', async (answer) => {
   const numberOfTimes = parseInt(answer);
   if (!isNaN(numberOfTimes)) {
     for (let i = 0; i < numberOfTimes; i++) {
-      generateRandom();
+      await generateRandom();
     }
   } else {
     console.log('Please enter a number.');
   }
   rl.close();
-  saveTrans()
+  await saveTrans()
 })}
 
-async function saveTrans(){
-    try{
-          
-        const result = await db.collection('leo__transactions').insertMany(queue);
-        console.log(`${result.insertedCount} transactions were added to database`)
-        }
 
-    catch(err){
-        console.error(err)
-    }
-}
+(async () => {
+  await wait();
+  await question ();
+  await saveBalance();
+})();
 
-wait();
-question ();
-saveBalance();
