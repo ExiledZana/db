@@ -157,7 +157,7 @@ async function saveTrans(){
 
 
 
-async function question (){
+/*async function question (){
   const readline = require('readline');
   const rl = readline.createInterface({
   input: process.stdin,
@@ -175,12 +175,24 @@ async function question (){
   }
   rl.close();
   await saveTrans()
-})}
+})}*/
+
+async function end(){
+  try{
+    await client.close();
+  }
+  catch(err){
+    console.error(err);
+  }
+}
 
 
 (async () => {
   await wait();
-  await question ();
+  await generateRandom();
+  await saveTrans()
+  //await question ();
   await saveBalance();
+  await end();
 })();
 
